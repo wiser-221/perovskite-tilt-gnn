@@ -1,0 +1,35 @@
+project:
+  name: perovskite-tilt-gnn
+  target: decomposition_energy_per_atom
+  target_unit: eV/atom
+  near_stable_threshold: 0.05
+
+dataset:
+  records: dataset/processed/perovskites.csv
+  structure_index: dataset/processed/structure_index.csv
+  structures: dataset/raw/structures
+  manifest: dataset/processed/dataset_manifest.json
+  random_split: dataset/processed/random_split.csv
+  ood_split: dataset/processed/ood_a_pair_split.csv
+
+protocol:
+  seeds: [42, 123, 2026]
+  validation_metric: mae
+  selection_rule: lowest_validation_mae
+  early_stopping: true
+  report_metrics: [mae, rmse, r2, pr_auc]
+  report_slices: [energy_range, composition_type]
+  target_standardization: training_split_only
+  test_set_usage: final_evaluation_only
+  uncertainty: three_seed_ensemble_standard_deviation
+
+comparisons:
+  - composition_baseline
+  - distance_gnn
+  - angle_gnn
+
+angle_ablations:
+  - distance_only
+  - distance_plus_b_o_b
+  - distance_plus_all_triplets
+  - full_angle_gnn
