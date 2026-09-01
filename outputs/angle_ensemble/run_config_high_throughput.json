@@ -1,0 +1,29 @@
+{
+  "cache_only": false,
+  "skip_cache": true,
+  "cache_workers": 4,
+  "workers": 4,
+  "batch_size": 192,
+  "eval_batch_size": 256,
+  "accumulation_steps": 1,
+  "epochs": 100,
+  "patience": 12,
+  "min_delta": 1e-05,
+  "learning_rate": 0.0003,
+  "weight_decay": 1e-05,
+  "gradient_clip": 5.0,
+  "hidden_dim": 128,
+  "layers": 4,
+  "radial_dim": 32,
+  "angle_dim": 16,
+  "cutoff": 5.0,
+  "max_neighbors": 16,
+  "max_angle_neighbors": 8,
+  "amp": "bf16",
+  "seeds": [
+    2026,
+    3407,
+    7777
+  ],
+  "output_dir": "/home/pc/home/perovskite-tilt-gnn/outputs/angle_ensemble"
+}

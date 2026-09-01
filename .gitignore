@@ -1,5 +1,12 @@
 .venv/
+.tools/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 dataset/processed/graph_cache.pt
+dataset/processed/angle_graph_shards/
+outputs/angle_benchmark*/
+outputs/interrupted_runs/
+# Incomplete ensemble members are kept locally until training and test evaluation finish.
+outputs/angle_ensemble/seed_3407/
+outputs/angle_ensemble/seed_7777/

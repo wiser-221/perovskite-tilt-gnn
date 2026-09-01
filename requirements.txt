@@ -1,0 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0
+numpy>=2.0,<3
+pymatgen>=2025.6
+scikit-learn>=1.6
+PyYAML>=6
+pytest>=8
+tqdm>=4.66
