@@ -1,0 +1,23 @@
+{
+  "seeds": [
+    42,
+    123,
+    2026,
+    3407,
+    7777
+  ],
+  "ensemble_test_metrics": {
+    "mae": 0.01474085036890504,
+    "rmse": 0.03602669145775986,
+    "r2": 0.8989655256958553,
+    "pr_auc": 0.949718565697201
+  },
+  "mean_predictive_std": 0.009137871247231295,
+  "checkpoints": [
+    "outputs/angle_ensemble/seed_42/best_model.pt",
+    "outputs/angle_ensemble/seed_123/best_model.pt",
+    "outputs/angle_ensemble/seed_2026/best_model.pt",
+    "outputs/angle_ensemble/seed_3407/best_model.pt",
+    "outputs/angle_ensemble/seed_7777/best_model.pt"
+  ]
+}

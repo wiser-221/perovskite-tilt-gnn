@@ -21,7 +21,6 @@
   "max_angle_neighbors": 8,
   "amp": "bf16",
   "seeds": [
-    2026,
     3407,
     7777
   ],
