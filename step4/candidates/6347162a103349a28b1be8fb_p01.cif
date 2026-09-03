@@ -1,0 +1,46 @@
+# generated using pymatgen
+data_EuZnCrSbO6
+_symmetry_space_group_name_H-M   'P 1'
+_cell_length_a   5.56110000
+_cell_length_b   5.68959970
+_cell_length_c   7.95179997
+_cell_angle_alpha   89.97150294
+_cell_angle_beta   89.97150270
+_cell_angle_gamma   89.97150115
+_symmetry_Int_Tables_number   1
+_chemical_formula_structural   EuZnCrSbO6
+_chemical_formula_sum   'Eu2 Zn2 Cr2 Sb2 O12'
+_cell_volume   251.59829999
+_cell_formula_units_Z   2
+loop_
+ _symmetry_equiv_pos_site_id
+ _symmetry_equiv_pos_as_xyz
+  1  'x, y, z'
+loop_
+ _atom_site_type_symbol
+ _atom_site_label
+ _atom_site_symmetry_multiplicity
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+  Eu  Eu0  1  0.01100000  0.96550000  0.75220000  1.0
+  Eu  Eu0  1  0.98900000  0.03450000  0.24780000  1.0
+  Zn  Zn1  1  0.48900000  0.46550000  0.74780000  1.0
+  Zn  Zn1  1  0.51100000  0.53450000  0.25220000  1.0
+  Cr  Cr2  1  0.00000000  0.50000000  0.00000000  1.0
+  Cr  Cr3  1  0.50000000  0.00000000  0.50000000  1.0
+  Sb  Sb4  1  0.00000000  0.50000000  0.50000000  1.0
+  Sb  Sb5  1  0.50000000  0.00000000  0.00000000  1.0
+  O  O6  1  0.07600000  0.48760000  0.22340000  1.0
+  O  O6  1  0.92400000  0.51240000  0.77660000  1.0
+  O  O7  1  0.18480000  0.23970000  0.96200000  1.0
+  O  O7  1  0.81520000  0.76030000  0.03800000  1.0
+  O  O8  1  0.23910000  0.18780000  0.53800000  1.0
+  O  O8  1  0.76090000  0.81220000  0.46200000  1.0
+  O  O9  1  0.26090000  0.68780000  0.96200000  1.0
+  O  O9  1  0.73910000  0.31220000  0.03800000  1.0
+  O  O10  1  0.31520000  0.73970000  0.53800000  1.0
+  O  O10  1  0.68480000  0.26030000  0.46200000  1.0
+  O  O11  1  0.42400000  0.98760000  0.27660000  1.0
+  O  O11  1  0.57600000  0.01240000  0.72340000  1.0

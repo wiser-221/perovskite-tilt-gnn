@@ -1,0 +1,46 @@
+# generated using pymatgen
+data_CePrSmGaO6
+_symmetry_space_group_name_H-M   'P 1'
+_cell_length_a   5.54500000
+_cell_length_b   5.98690037
+_cell_length_c   8.11420018
+_cell_angle_alpha   89.83989991
+_cell_angle_beta   89.83990179
+_cell_angle_gamma   89.83990007
+_symmetry_Int_Tables_number   1
+_chemical_formula_structural   CePrSmGaO6
+_chemical_formula_sum   'Ce2 Pr2 Sm2 Ga2 O12'
+_cell_volume   269.36689624
+_cell_formula_units_Z   2
+loop_
+ _symmetry_equiv_pos_site_id
+ _symmetry_equiv_pos_as_xyz
+  1  'x, y, z'
+loop_
+ _atom_site_type_symbol
+ _atom_site_label
+ _atom_site_symmetry_multiplicity
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+  Ce  Ce0  1  0.46280000  0.39850000  0.74550000  1.0
+  Ce  Ce0  1  0.53720000  0.60150000  0.25450000  1.0
+  Pr  Pr1  1  0.00000000  0.50000000  0.50000000  1.0
+  Pr  Pr2  1  0.50000000  0.00000000  0.00000000  1.0
+  Sm  Sm3  1  0.03720000  0.89850000  0.75450000  1.0
+  Sm  Sm3  1  0.96280000  0.10150000  0.24550000  1.0
+  Ga  Ga4  1  0.00000000  0.50000000  0.00000000  1.0
+  Ga  Ga5  1  0.50000000  0.00000000  0.50000000  1.0
+  O  O6  1  0.14310000  0.46040000  0.22290000  1.0
+  O  O6  1  0.85690000  0.53960000  0.77710000  1.0
+  O  O7  1  0.14940000  0.21410000  0.92820000  1.0
+  O  O7  1  0.85060000  0.78590000  0.07180000  1.0
+  O  O8  1  0.20750000  0.16360000  0.57150000  1.0
+  O  O8  1  0.79250000  0.83640000  0.42850000  1.0
+  O  O9  1  0.29250000  0.66360000  0.92850000  1.0
+  O  O9  1  0.70750000  0.33640000  0.07150000  1.0
+  O  O10  1  0.35060000  0.71410000  0.57180000  1.0
+  O  O10  1  0.64940000  0.28590000  0.42820000  1.0
+  O  O11  1  0.35690000  0.96040000  0.27710000  1.0
+  O  O11  1  0.64310000  0.03960000  0.72290000  1.0
