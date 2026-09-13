@@ -139,7 +139,7 @@ class AngleGNN(nn.Module):
             nn.Linear(hidden_dim, hidden_dim), nn.SiLU(), nn.Linear(hidden_dim, 1)
         )
 
-    def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+    def encode(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
         nodes = self.embedding(batch["z"])
         center, neighbor = batch["edge_index"]
         radial = self.radial(batch["distance"])
@@ -162,4 +162,7 @@ class AngleGNN(nn.Module):
                 angle_basis, type_features, mask,
             )
         crystals = aggregate(nodes, batch["batch"], int(batch["batch"].max()) + 1)
-        return self.head(crystals).squeeze(-1)
+        return crystals
+
+    def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+        return self.head(self.encode(batch)).squeeze(-1)

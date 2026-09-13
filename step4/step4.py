@@ -1,6 +1,8 @@
 """Generate Glazer-tilt and cation-ordering candidates without PySPuDS."""
 
-import csv, gzip, json, math, warnings
+import csv, gzip, json, math, warnings, hashlib, sys
+from collections import defaultdict
+import torch
 from pathlib import Path
 import numpy as np
 from pymatgen.analysis.structure_matcher import StructureMatcher
@@ -114,75 +116,85 @@ def descriptors(structure, row, a):
             "minimum_distance_ang": distances.min()}
 
 
-def specs(row):
-    """Nine non-degenerate angle cells plus one independent ordering control."""
-    result = [("a0a0a0", 0., "rocksalt", "rocksalt")]
-    result += [(pattern, angle, "rocksalt", "rocksalt")
-               for pattern in ("a0a0c-", "a-a-a-", "a-a-c+", "a0a0c+")
-               for angle in (6., 12.)]
-    # a0a0a0 has no meaningful angle value; use its tenth cell for a
-    # separately labelled cation-ordering control instead of a duplicate CIF.
-    if row["a1_element"] != row["a2_element"]:
-        result.append(("a0a0a0_ordering_control", 0., "layered", "rocksalt"))
-    else:
-        result.append(("a0a0a0_ordering_control", 0., "rocksalt", "layered"))
-    return result
-
-
-def save(structure, row, number, pattern, angle, a_order, b_order, geometry, folder):
-    cid = f"{row['material_id']}_p{number:02d}"
-    path = folder / f"{cid}.cif"
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="Site labels are not unique.*")
-        CifWriter(structure).write_file(path)
-    try: sg = SpacegroupAnalyzer(structure, symprec=.1).get_space_group_symbol()
-    except Exception: sg = "undetermined"
-    return {"candidate_id": cid, "material_id": row["material_id"], "composition": row["formula"],
-            "parent_structure_id": row["structure_id"], "research_role": row["research_role"],
-            "selection_category": row["selection_category"], "tilt_pattern": pattern,
-            "nominal_tilt_deg": angle, "A_site_ordering": a_order, "B_site_ordering": b_order,
-            "space_group": sg, "generation_method": "MP parent" if pattern == "original" else "native Glazer generator v1",
-            **geometry, "structure_path": str(path.relative_to(ROOT))}
-
 
 def main():
-    rows = [x for x in read_csv(SELECTION) if x["selected"] == "True"]
-    if len(rows) != 30: raise RuntimeError(f"expected 30 selected compositions, found {len(rows)}")
+    sys.path.insert(0, str(ROOT / "project"))
+    from graph_data import GraphConfig, structure_to_graph, geometry_descriptors
+    rows = read_csv(ROOT / "dataset/processed/perovskites.csv")
+    prior = {r["material_id"]: r["split"] for r in read_csv(ROOT / "dataset/processed/random_split.csv")}
+    groups = defaultdict(list)
+    for row in rows:
+        if not math.isfinite(float(row["formation_energy_per_atom"])):
+            raise ValueError("invalid formation label")
+        groups[Composition(row["formula"]).reduced_formula].append(row)
+    # Validation/test never include a composition seen by the pretrained weights.
+    splits = {}
+    for formula, members in groups.items():
+        labels = {prior[r["material_id"]] for r in members}
+        splits[formula] = "train" if "train" in labels else ("validation" if "validation" in labels else "test")
+    old_used = {Composition(r["formula"]).reduced_formula for r in read_csv(SELECTION) if r["selected"] == "True"}
+    eligible = [f for f in groups if splits[f] == "test" and f not in old_used]
+    eligible.sort(key=lambda f: hashlib.sha256(("formation-v1:" + f).encode()).hexdigest())
+    selected = eligible[:100]
+    assert len(selected) == 100
+    # Seventy new training compositions; fifteen validation, fifteen sealed test.
+    for i, formula in enumerate(selected):
+        splits[formula] = "train" if i < 70 else ("validation" if i < 85 else "test")
     index = {x["structure_id"]: x for x in read_csv(INDEX)}
-    folder = HERE / "candidates"; folder.mkdir(exist_ok=True)
-    for path in folder.glob("*.cif"): path.unlink()
-    # Tight thresholds are intentional: 6° and 12° are distinct hypotheses and
-    # must not be merged by the looser defaults commonly used for relaxed cells.
-    matcher = StructureMatcher(ltol=.03, stol=.04, angle_tol=1, primitive_cell=False,
-                               scale=True, attempt_supercell=False)
-    manifest = []
-    for position, row in enumerate(rows, 1):
+    cfg = GraphConfig()
+    matcher = StructureMatcher(ltol=.001, stol=.002, angle_tol=.1,
+                               primitive_cell=False, scale=False, attempt_supercell=False)
+    candidates, rejected = [], []
+    for position, formula in enumerate(selected, 1):
+        row = sorted(groups[formula], key=lambda r:r["material_id"])[0]
         parent = parent_structure(row, index)
-        oxygen = sum(s.specie.symbol == "O" for s in parent)
-        a = (parent.volume / (oxygen / 3)) ** (1 / 3)
-        local = [save(parent, row, 1, "original", "original", "original", "original",
-                      descriptors(parent, row, a), folder)]
-        generated = []
-        for pattern, angle, a_order, b_order in specs(row):
-            if len(local) == 11: break
-            build_pattern = "a0a0a0" if pattern.endswith("_ordering_control") else pattern
-            structure = build(row, a, build_pattern, angle, a_order, b_order)
-            geometry = descriptors(structure, row, a)
-            if geometry["minimum_distance_ang"] < 1.2: continue
-            if any(matcher.fit(structure, old) for old in generated): continue
-            generated.append(structure)
-            local.append(save(structure, row, len(local) + 1, pattern, angle,
-                              a_order, b_order, geometry, folder))
-        if len(local) != 11: raise RuntimeError(f"{row['formula']} produced only {len(local)} candidates")
-        manifest.extend(local); print(f"[{position:02d}/30] {row['formula']}: 10 candidates")
-    fields = ["candidate_id", "material_id", "composition", "parent_structure_id", "research_role",
-              "selection_category", "tilt_pattern", "nominal_tilt_deg", "A_site_ordering",
-              "B_site_ordering", "space_group", "generation_method", "actual_bob_mean_deg",
-              "actual_bob_std_deg", "bo_length_mean_ang", "bo_length_std_ang",
-              "minimum_distance_ang", "structure_path"]
-    with (HERE / "candidate_manifest.csv").open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fields); writer.writeheader(); writer.writerows(manifest)
-    print(f"wrote {len(manifest)} candidates")
+        a = (parent.volume / (sum(s.specie.symbol == "O" for s in parent) / 3)) ** (1/3)
+        variants = [("parent", 0., parent), ("cubic", 0., build(row, a, "a0a0a0", 0., "rocksalt", "rocksalt"))]
+        variants += [(pattern, float(angle), build(row, a, pattern, angle, "rocksalt", "rocksalt"))
+                     for pattern in ("a0a0c-", "a-a-a-") for angle in range(2, 15, 2)]
+        accepted = []
+        for pattern, amplitude, structure in variants:
+            try:
+                desc = descriptors(structure, row, a)
+                if desc["minimum_distance_ang"] < 1.2:
+                    raise ValueError("atomic overlap")
+                if any(matcher.fit(structure, previous) for previous in accepted):
+                    continue
+                graph = structure_to_graph(structure, row, cfg)
+                graph["target"] = torch.tensor(float(row["formation_energy_per_atom"]))
+                accepted.append(structure)
+                geom = geometry_descriptors(graph)
+                cid = row["material_id"] + "_" + pattern + "_" + str(int(amplitude))
+                # Angle task: interpolate held-out distortions of compositions that are
+                # present in the query pool. Original formation rows retain the stricter
+                # composition-disjoint split below.
+                angle_split = ("validation" if amplitude == 8 and pattern not in ("parent","cubic")
+                               else "test" if amplitude in (4,12) and pattern not in ("parent","cubic")
+                               else "train")
+                candidates.append({"candidate_id":cid, "material_id":row["material_id"],
+                    "composition":formula, "split":angle_split, "pattern":pattern,
+                    "amplitude_deg":amplitude, "parent_formation_ev_atom":float(row["formation_energy_per_atom"]),
+                    "generator":"dataset_parent" if pattern=="parent" else "native_shared_oxygen_Glazer",
+                    "ordering":"dataset" if pattern=="parent" else "fixed_rocksalt",
+                    "structure":structure.as_dict(), "graph":graph, **{k:float(v) for k,v in desc.items()},
+                    "obo_mean_deg":geom["obo_angle_deg_mean"], "volume":structure.volume, "natoms":len(structure)})
+            except (RuntimeError, ValueError) as exc:
+                if pattern == "parent":
+                    raise RuntimeError(f"invalid parent {formula}: {exc}") from exc
+                rejected.append({"composition":formula,"pattern":pattern,"amplitude":amplitude,"error":str(exc)})
+        print(f"{position}/100 {formula}: {len(accepted)} structures", flush=True)
+    parents = {c["material_id"] for c in candidates if c["pattern"]=="parent"}
+    assert len(parents)==100
+    for row in rows:
+        row["formation_split"] = splits[Composition(row["formula"]).reduced_formula]
+    output = {"schema":1, "target":"formation_energy_per_atom", "graph_config":cfg.__dict__,
+              "rows":rows,"candidates":candidates,"rejected":rejected,
+              "selection":"100 formerly test-only compositions; angle-stratified holdout; excludes old 30",
+              "split_counts":{k:sum(r["formation_split"]==k for r in rows) for k in ("train","validation","test")}}
+    tmp = HERE / "data.tmp"
+    torch.save(output, tmp); tmp.replace(HERE / "data.pt")
+    print("completed", len(candidates), output["split_counts"], flush=True)
 
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()

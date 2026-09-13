@@ -1,0 +1,28 @@
+{
+  "seeds": [42, 123, 2026, 3407, 7777],
+  "batch_size": 96,
+  "threads": 2,
+  "baseline_epochs": 40,
+  "baseline_patience": 8,
+  "baseline_lr": 0.0003,
+  "adapt_epochs": 20,
+  "adapt_patience": 5,
+  "adapt_lr": 0.0001,
+  "replay_samples": 4096,
+  "proxy_absolute_weight": 0.25,
+  "pair_weight": 2.0,
+  "residual_replay_weight": 5.0,
+  "budgets": [400, 700, 999],
+  "pair_mae_limit": 0.01,
+  "regret_limit": 0.01,
+  "retention_ratio_limit": 1.05,
+  "uncertainty_min_coverage": 0.5,
+  "sampling_seeds": [19, 71, 137],
+  "chgnet_model": "0.3.0"
+  ,"dual_batch_size": 48
+  ,"dual_epochs": 80
+  ,"dual_patience": 12
+  ,"dual_encoder_lr": 0.00003
+  ,"dual_head_lr": 0.001
+  ,"dual_anchor_weight": 0.5
+}

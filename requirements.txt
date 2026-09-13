@@ -6,3 +6,11 @@ scikit-learn>=1.6
 PyYAML>=6
 pytest>=8
 tqdm>=4.66
+chgnet>=0.4.2
+# Step 6 DFT input/workflow tooling (the VASP executable and licensed POTCARs
+# must be supplied separately by the user/institution).
+ase>=3.29
+custodian>=2025.12
+atomate2>=0.1.5
+jobflow>=0.3
+mp-api>=0.46
