@@ -1,6 +1,6 @@
 """Five-seed paired-graph model for cubic-anchored tilt formation energies."""
 from __future__ import annotations
-import json, random, sqlite3, sys, time
+import csv, json, random, sqlite3, sys, time
 from pathlib import Path
 from collections import defaultdict
 import numpy as np
@@ -88,6 +88,53 @@ def train_seed(saved,train,val,seed,device,cfg):
            'selection_score':best_score,'label_source':'dataset_DFT_anchor_plus_CHGNet_delta'}
     del model;torch.cuda.empty_cache();return saved
 
+def export_readable_results():
+    """Export the SQLite training log to files readable without database tools."""
+    out=ROOT/'step6';db_path=out/'results.sqlite'
+    with sqlite3.connect(db_path) as db:
+        epochs=[json.loads(row[0]) for row in db.execute(
+            "select payload from events where kind='dual_epoch' order by time")]
+        def latest(kind):
+            row=db.execute("select payload from events where kind=? order by time desc limit 1",(kind,)).fetchone()
+            return json.loads(row[0]) if row else {}
+        final=latest('dual_final_test');audit=latest('dual_same_metric_audit')
+    fields=['seed','epoch','loss','delta_mae','absolute_mae','seconds','peak_gpu_mib']
+    with (out/'training_history.csv').open('w',newline='',encoding='utf-8-sig') as f:
+        writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
+        writer.writerows({k:x.get(k) for k in fields} for x in epochs)
+    bundle=torch.load(out/'models.pt',map_location='cpu',weights_only=False)
+    by_key={(x['seed'],x['epoch']):x for x in epochs}
+    best={seed:(saved['selection_score'],by_key[(seed,saved['best_epoch'])])
+          for seed,saved in bundle.items()}
+    lines=['# Step 6 最终结果（可直接阅读）','',
+      '> 重要：以下误差相对于 **CHGNet 代理标签**，不是相对于真实 DFT。任务范围是已知组成上的未见角度插值。','',
+      '## 最终五模型集成','',
+      '| 数据集 | 绝对形成能 MAE (eV/atom) | 相对参考结构 ΔE MAE (eV/atom) |',
+      '|---|---:|---:|',
+      f"| 验证集 | {final.get('validation_absolute_mae',float('nan')):.6f} | {final.get('validation_delta_mae',float('nan')):.6f} |",
+      f"| 封存测试集 | {final.get('test_absolute_mae',float('nan')):.6f} | {final.get('test_delta_mae',float('nan')):.6f} |",'',
+      f"- 测试集 ΔE 误差 P90：{final.get('test_delta_p90',float('nan')):.6f} eV/atom",
+      f"- 测试集平均集成不确定性：{final.get('test_uncertainty_mean',float('nan')):.6f} eV/atom",
+      f"- 测试集不确定性—误差 Spearman：{final.get('test_uncertainty_error_spearman',float('nan')):.3f}",'',
+      '## 与旧方案完全相同口径的复核','',
+      '| 数据集 | 同组成两两能量差 pair MAE (eV/atom) | regret (eV/atom) |',
+      '|---|---:|---:|',
+      f"| 验证集 | {audit.get('validation_pair_mae',float('nan')):.6f} | {audit.get('validation_regret',float('nan')):.6f} |",
+      f"| 封存测试集 | {audit.get('test_pair_mae',float('nan')):.6f} | {audit.get('test_regret',float('nan')):.6f} |",'',
+      '该复核沿用 README 历史表中的 pair MAE 定义，因此约 0.075 → 0.0053 的提升不是更换 MAE 定义造成的。','',
+      '## 五个已保存模型的 checkpoint','',
+      '| seed | 最佳 epoch | ΔE MAE | 绝对 MAE | 选择分数 | 单 epoch 时间 (s) | 峰值显存 (MiB) |',
+      '|---:|---:|---:|---:|---:|---:|---:|']
+    for seed in sorted(best):
+        score,x=best[seed];lines.append(
+          f"| {seed} | {x['epoch']} | {x['delta_mae']:.6f} | {x['absolute_mae']:.6f} | {score:.6f} | {x['seconds']:.2f} | {x['peak_gpu_mib']:.1f} |")
+    lines += ['', '## 文件说明','',
+      '- `models.pt`：最终五个训练模型，种子为 42、123、2026、3407、7777。',
+      '- `training_history.csv`：378条逐 epoch 原始训练记录，可直接用 Excel、WPS 或文本编辑器查看。',
+      '- `results.sqlite`：完整机器可读实验数据库，保留历史方案和审计事件。','',
+      '数据划分中候选 ID 及 `(组成, 模式, 角度)` 无交叉；100个组成有意在训练、验证和测试间共享，所以不能把结果解释成对全新化学组成的外推能力。','']
+    (out/'RESULTS.md').write_text('\n'.join(lines),encoding='utf-8')
+
 def main():
     device=common.setup();cfg=common.config();data=common.load_data();proxy=__import__('step6').proxy_labels(data)
     with sqlite3.connect(common.DB) as db:raw=dict(db.execute('select id,energy from labels'))
@@ -117,6 +164,8 @@ def main():
         matrices.append(m['pred']);deltas.append(m['delta_pred']);truth=m['truth'];dtruth=m['delta_true']
     matrix=np.asarray(matrices);dm=np.asarray(deltas);result={'absolute_mae':float(abs(matrix.mean(0)-truth).mean()),
       'delta_mae':float(abs(dm.mean(0)-dtruth).mean()),'mean_uncertainty':float(dm.std(0,ddof=1).mean()),'seeds':cfg['seeds']}
-    common.save_atomic(bundle,ROOT/'step6/models.pt');common.event('dual_complete',**result);print(json.dumps(result))
+    common.save_atomic(bundle,ROOT/'step6/models.pt');common.event('dual_complete',**result)
+    export_readable_results();print(json.dumps(result))
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    export_readable_results() if len(sys.argv)>1 and sys.argv[1]=='export' else main()

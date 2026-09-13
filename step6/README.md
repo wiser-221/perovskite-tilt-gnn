@@ -2,6 +2,8 @@
 
 当前状态：1599个候选与CHGNet代理标签、五个形成能基础模型和五个双图差分模型均已完成。双图模型已通过角度留出验证及一次性封存测试；结果是CHGNet代理精度，不是DFT精度。
 
+**直接查看最终结果：[`RESULTS.md`](RESULTS.md)。** 每个 seed、每个 epoch 的完整 MAE 曲线见 [`training_history.csv`](training_history.csv)，可用 Excel/WPS 打开。本文末尾表格是旧单图方案的失败记录，不是最终模型成绩。
+
 ## 最少文件组织
 
 - `step4/step4.py`：生成器与组成隔离划分。
