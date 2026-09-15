@@ -12,9 +12,16 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 ROOT = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
-SELECTION = ROOT / "step3/step3_results.csv"
 INDEX = ROOT / "dataset/processed/structure_index.csv"
 ORDERINGS = ("rocksalt", "layered", "columnar")
+OLD_STUDY_COMPOSITIONS = {
+    'Ba2FeWO6', 'BaEuGaCoO6', 'BaFeCoBiO6', 'BaSr(NiO3)2', 'BaTbTiSnO6',
+    'BaYTiCuO6', 'CaNdZrSiO6', 'CePrSmGaO6', 'CeTiCrGaO6', 'EuAlCrSbO6',
+    'EuDyCrWO6', 'EuGdSbWO6', 'EuZnCrSbO6', 'Gd2MgFeO6', 'GdVInCoO6',
+    'KSmYSeO6', 'LaGdDyFeO6', 'LaMnCoBiO6', 'LaYMgTiO6', 'LiEuHfNiO6',
+    'MgNb(CuO3)2', 'NaCeMnNbO6', 'NaNiGeBiO6', 'NdEuZnSiO6', 'Pr2GaNiO6',
+    'SmMgCuSiO6', 'SrLiTbWO6', 'SrSmZrInO6', 'SrTbPrHfO6', 'TbSmAlCrO6',
+}
 
 
 def read_csv(path):
@@ -132,7 +139,9 @@ def main():
     for formula, members in groups.items():
         labels = {prior[r["material_id"]] for r in members}
         splits[formula] = "train" if "train" in labels else ("validation" if "validation" in labels else "test")
-    old_used = {Composition(r["formula"]).reduced_formula for r in read_csv(SELECTION) if r["selected"] == "True"}
+    # Preserve the exact historical exclusion without retaining the obsolete
+    # 5,971-row Step-3 selection table.
+    old_used = OLD_STUDY_COMPOSITIONS
     eligible = [f for f in groups if splits[f] == "test" and f not in old_used]
     eligible.sort(key=lambda f: hashlib.sha256(("formation-v1:" + f).encode()).hexdigest())
     selected = eligible[:100]

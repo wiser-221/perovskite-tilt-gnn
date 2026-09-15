@@ -9,8 +9,8 @@ outputs/angle_benchmark*/
 outputs/interrupted_runs/
 # Licensed VASP pseudopotentials and large restart/output files must never be committed.
 # Regenerable graph cache exceeds GitHub's 100 MB per-file limit.
-/step4/data.pt
+/transfer_learning/data.pt
 # Intermediate/redundant checkpoints; the final five-model bundle is models.pt.
-/step6/progress.pt
-/step6/working.pt
-/step6/dual_models.pt
+/transfer_learning/progress.pt
+/transfer_learning/working.pt
+/transfer_learning/delta_models.pt

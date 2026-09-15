@@ -9,10 +9,10 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path[:0]=[str(ROOT/'project'),str(ROOT/'step5')]
+sys.path[:0]=[str(ROOT/'project'),str(ROOT/'transfer_learning')]
 from graph_data import collate_graphs
 from models import AngleGNN
-import step5 as common
+import train_formation as common
 
 class PairSet(Dataset):
     def __init__(self,items,cubic,proxy,raw):self.items,self.cubic,self.proxy,self.raw=items,cubic,proxy,raw
@@ -90,7 +90,7 @@ def train_seed(saved,train,val,seed,device,cfg):
 
 def export_readable_results():
     """Export the SQLite training log to files readable without database tools."""
-    out=ROOT/'step6';db_path=out/'results.sqlite'
+    out=ROOT/'transfer_learning';db_path=out/'results.sqlite'
     with sqlite3.connect(db_path) as db:
         epochs=[json.loads(row[0]) for row in db.execute(
             "select payload from events where kind='dual_epoch' order by time")]
@@ -102,7 +102,7 @@ def export_readable_results():
     with (out/'training_history.csv').open('w',newline='',encoding='utf-8-sig') as f:
         writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
         writer.writerows({k:x.get(k) for k in fields} for x in epochs)
-    bundle=torch.load(out/'models.pt',map_location='cpu',weights_only=False)
+    bundle=torch.load(out/'final_models.pt',map_location='cpu',weights_only=False)
     by_key={(x['seed'],x['epoch']):x for x in epochs}
     best={seed:(saved['selection_score'],by_key[(seed,saved['best_epoch'])])
           for seed,saved in bundle.items()}
@@ -129,14 +129,14 @@ def export_readable_results():
         score,x=best[seed];lines.append(
           f"| {seed} | {x['epoch']} | {x['delta_mae']:.6f} | {x['absolute_mae']:.6f} | {score:.6f} | {x['seconds']:.2f} | {x['peak_gpu_mib']:.1f} |")
     lines += ['', '## 文件说明','',
-      '- `models.pt`：最终五个训练模型，种子为 42、123、2026、3407、7777。',
+      '- `final_models.pt`：最终五个训练模型，种子为 42、123、2026、3407、7777。',
       '- `training_history.csv`：378条逐 epoch 原始训练记录，可直接用 Excel、WPS 或文本编辑器查看。',
       '- `results.sqlite`：完整机器可读实验数据库，保留历史方案和审计事件。','',
       '数据划分中候选 ID 及 `(组成, 模式, 角度)` 无交叉；100个组成有意在训练、验证和测试间共享，所以不能把结果解释成对全新化学组成的外推能力。','']
     (out/'RESULTS.md').write_text('\n'.join(lines),encoding='utf-8')
 
 def main():
-    device=common.setup();cfg=common.config();data=common.load_data();proxy=__import__('step6').proxy_labels(data)
+    device=common.setup();cfg=common.config();data=common.load_data();proxy=__import__('label_and_active').proxy_labels(data)
     with sqlite3.connect(common.DB) as db:raw=dict(db.execute('select id,energy from labels'))
     by_comp=defaultdict(list)
     for x in data['candidates']:by_comp[x['composition']].append(x)
@@ -152,7 +152,7 @@ def main():
     train=[x for x in data['candidates'] if x['split']=='train' and x['pattern'] not in ('parent','cubic')]
     val=[x for x in data['candidates'] if x['split']=='validation']
     train,val=PairSet(train,cubic,proxy,raw),PairSet(val,cubic,proxy,raw)
-    base=torch.load(ROOT/'step5/models.pt',map_location='cpu',weights_only=False);path=ROOT/'step6/dual_models.pt'
+    base=torch.load(ROOT/'transfer_learning/base_models.pt',map_location='cpu',weights_only=False);path=ROOT/'transfer_learning/delta_models.pt'
     bundle=torch.load(path,map_location='cpu',weights_only=False) if path.exists() else {}
     for seed in cfg['seeds']:
         if seed not in bundle:
@@ -164,7 +164,7 @@ def main():
         matrices.append(m['pred']);deltas.append(m['delta_pred']);truth=m['truth'];dtruth=m['delta_true']
     matrix=np.asarray(matrices);dm=np.asarray(deltas);result={'absolute_mae':float(abs(matrix.mean(0)-truth).mean()),
       'delta_mae':float(abs(dm.mean(0)-dtruth).mean()),'mean_uncertainty':float(dm.std(0,ddof=1).mean()),'seeds':cfg['seeds']}
-    common.save_atomic(bundle,ROOT/'step6/models.pt');common.event('dual_complete',**result)
+    common.save_atomic(bundle,ROOT/'transfer_learning/final_models.pt');common.event('dual_complete',**result)
     export_readable_results();print(json.dumps(result))
 
 if __name__=='__main__':

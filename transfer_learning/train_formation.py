@@ -15,14 +15,15 @@ from graph_data import collate_graphs, GraphConfig, structure_to_graph
 from models import AngleGNN
 from graph_data import TRIPLET_B_O_B, ROLE_B, ROLE_O
 from train_angle_ensemble import CachedGraphDataset, ShardBatchSampler
-CONFIG = ROOT / "step6/config.json"
-DB = ROOT / "step6/results.sqlite"
+HERE = Path(__file__).resolve().parent
+CONFIG = HERE / "config.json"
+DB = HERE / "results.sqlite"
 
 def config():
     return json.loads(CONFIG.read_text())
 
 def load_data():
-    return torch.load(ROOT / "step4/data.pt", map_location="cpu", weights_only=False)
+    return torch.load(HERE / "data.pt", map_location="cpu", weights_only=False)
 
 def save_atomic(obj, path):
     path = Path(path); temp = path.with_suffix(".tmp")
@@ -189,7 +190,7 @@ def fit(saved, train_set, val_set, device, tag, epochs, patience, lr, proxy=None
         if len(pairs):
             pair_loader=DataLoader(pairs,batch_size=cfg["batch_size"]//2,shuffle=True,
                 collate_fn=collate_pairs,generator=torch.Generator().manual_seed(seed),num_workers=0)
-    resume=ROOT/"step6/progress.pt"
+    resume=HERE/"progress.pt"
     best={k:v.detach().cpu().clone() for k,v in model.state_dict().items()}
     initial_pred,initial_true=predict(model,val_loader,device,mean,std)
     initial_formation_mae=float(np.mean(abs(initial_pred-initial_true)))
@@ -271,7 +272,7 @@ def train():
     val_rows=[r for r in data["rows"] if r["formation_split"]=="validation"]
     train_set=base_dataset(train_rows);val_set=base_dataset(val_rows)
     y=np.array([float(r["formation_energy_per_atom"]) for r in train_rows])
-    path=ROOT/"step5/models.pt"
+    path=HERE/"base_models.pt"
     bundle=torch.load(path,map_location="cpu",weights_only=False) if path.exists() else {}
     for seed in cfg["seeds"]:
         if seed in bundle: continue
@@ -308,16 +309,16 @@ def infer(path, a_elements=None, b_elements=None, reference_path=None):
         if len(roles)>1:raise ValueError('ambiguous A/B assignment: provide --a-elements and --b-elements')
         row=matching[0]
     g=structure_to_graph(s,row,GraphConfig(**data["graph_config"]))
-    model_path=ROOT/"step6/models.pt"
-    if not model_path.exists():model_path=ROOT/"step5/models.pt"
+    model_path=HERE/"final_models.pt"
+    if not model_path.exists():model_path=HERE/"base_models.pt"
     bundle=torch.load(model_path,map_location="cpu",weights_only=False);values=[]
     architecture=next(iter(bundle.values())).get("architecture")
     if architecture=="dual_cubic_delta_v1":
         if not reference_path:raise ValueError("dual model requires --reference-cif (normally the same-composition cubic structure)")
         reference=Structure.from_file(reference_path);reference.remove_oxidation_states()
         rg=structure_to_graph(reference,row,GraphConfig(**data["graph_config"]))
-        sys.path.insert(0,str(ROOT/'step6'));from dual import DualAngleGNN
-        bases=torch.load(ROOT/'step5/models.pt',map_location='cpu',weights_only=False);deltas=[]
+        sys.path.insert(0,str(HERE));from train_delta import DualAngleGNN
+        bases=torch.load(HERE/'base_models.pt',map_location='cpu',weights_only=False);deltas=[]
         xb,rb=collate_graphs([g]),collate_graphs([rg])
         for seed,saved in bundle.items():
             model=DualAngleGNN(bases[seed]).to(device);model.load_state_dict(saved['model_state_dict'])

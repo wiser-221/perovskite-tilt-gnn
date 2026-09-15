@@ -1,7 +1,7 @@
 """CHGNet single-point labels, budget-matched active learning and acceptance.
 
 One SQLite file stores labels, queries, predictions, metrics and GPU logs.
-Run: python step6/step6.py all | label | learn | report
+Run: python transfer_learning/label_and_active.py all | label | learn | report
 """
 from __future__ import annotations
 import argparse, hashlib, json, math, sqlite3, subprocess, sys, threading, time
@@ -11,8 +11,8 @@ import numpy as np
 import torch
 from scipy.stats import spearmanr
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'step5'))
-import step5 as common
+sys.path.insert(0,str(ROOT/'transfer_learning'))
+import train_formation as common
 DB=common.DB
 
 def connect():
@@ -135,7 +135,7 @@ def accepted(metrics):
 
 def learn():
     cfg=common.config();device=common.setup();data=common.load_data();labels=proxy_labels(data)
-    baseline=torch.load(ROOT/'step5/models.pt',map_location='cpu',weights_only=False)
+    baseline=torch.load(ROOT/'transfer_learning/base_models.pt',map_location='cpu',weights_only=False)
     if set(baseline)!=set(cfg['seeds']):raise ValueError('need all five formation models')
     train=[c for c in data['candidates'] if c['split']=='train']
     val=[c for c in data['candidates'] if c['split']=='validation']
@@ -146,7 +146,7 @@ def learn():
     base_mae=formation_mae(baseline,valset,device)
     baseline_matrix=predict_bundle(baseline,train,labels,device)
     best_score=float('inf');best_metrics=None;best_run=None
-    final_path=ROOT/'step6/models.pt';work_path=ROOT/'step6/working.pt'
+    final_path=ROOT/'transfer_learning/final_models.pt';work_path=ROOT/'transfer_learning/working.pt'
     # Only validation used for selecting the final strategy/round; all test labels remain hidden.
     for sampling_seed in cfg['sampling_seeds']:
         initial=[]
@@ -247,7 +247,7 @@ def report():
             '运行细节、每轮选样、标签与GPU记录统一保存在results.sqlite；完成预算不代表达到目标。',
             '角度生成器采用共享氧位置平均的原生Glazer构造，不是PySPuDS；会伴随键长变化。',
             '每条生成扫描固定体积与rocksalt排序；与数据集母体的差还可包含晶胞形状和排序差，不能全归因于角度。']
-    path=ROOT/'step6/README.md'
+    path=ROOT/'transfer_learning/README.md'
     existing=path.read_text(encoding='utf-8') if path.exists() else ''
     marker='\n<!-- generated-results -->\n'
     guide=existing.split(marker)[0]

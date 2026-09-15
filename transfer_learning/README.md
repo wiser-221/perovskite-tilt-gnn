@@ -1,35 +1,37 @@
-# Step 4—6：角度畸变形成能预测
+# 形成能迁移与角度差分训练
 
 当前状态：1599个候选与CHGNet代理标签、五个形成能基础模型和五个双图差分模型均已完成。双图模型已通过角度留出验证及一次性封存测试；结果是CHGNet代理精度，不是DFT精度。
 
 **直接查看最终结果：[`RESULTS.md`](RESULTS.md)。** 每个 seed、每个 epoch 的完整 MAE 曲线见 [`training_history.csv`](training_history.csv)，可用 Excel/WPS 打开。本文末尾表格是旧单图方案的失败记录，不是最终模型成绩。
 
-## 最少文件组织
+## 文件组织
 
-- `step4/step4.py`：生成器与组成隔离划分。
-- `step4/data.pt`：1599个结构、图、几何描述及原始数据划分，统一打包，无需上千个CIF文件。
-- `step5/step5.py`：形成能迁移训练、公共训练函数及CIF推理。
-- `step5/models.pt`：五个形成能基础模型，按种子打包。
-- `step6/step6.py`：单点标注、主动/随机采样对照、验收与报告。
-- `step6/dual.py`：共享编码器的候选—立方参考双图差分训练。
-- `step6/config.json`：统一训练预算与验收阈值。
-- `step6/results.sqlite`：标签、每轮选样、验证预测、训练与GPU日志。
-- `step6/models.pt`：验证集选择的五模型集成；`progress.pt`和`working.pt`用于断点恢复。
+- `generate_data.py`：生成1599个结构并完成组成、角度划分。
+- `data.pt`：运行生成器后得到的结构、晶体图和几何描述数据包，不提交Git。
+- `train_formation.py`：形成能迁移训练、公共训练函数及CIF推理。
+- `base_models.pt`：五个DFT形成能基础模型。
+- `label_and_active.py`：CHGNet单点标注、主动/随机采样实验和报告生成。
+- `train_delta.py`：候选—立方参考双图差分训练。
+- `config.json`：训练配置和验收阈值。
+- `final_models.pt`：最终五个双图差分模型。
+- `RESULTS.md`：最终结果摘要。
+- `training_history.csv`：最终模型逐epoch训练记录。
+- `results.sqlite`：标签、历史对照、预测、训练和GPU审计记录。
 
 模型和结果文件随着运行逐步生成，列出文件名不表示已经完成。
 
 ## 执行
 
 ```bash
-OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 .venv/bin/python step4/step4.py
-OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 MPLCONFIGDIR=/tmp/matplotlib .venv/bin/python step6/step6.py all
-OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 MPLCONFIGDIR=/tmp/matplotlib .venv/bin/python step6/dual.py
+OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 .venv/bin/python transfer_learning/generate_data.py
+OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 MPLCONFIGDIR=/tmp/matplotlib .venv/bin/python transfer_learning/label_and_active.py all
+OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 MPLCONFIGDIR=/tmp/matplotlib .venv/bin/python transfer_learning/train_delta.py
 ```
 
 恢复运行使用同一个`all`命令，读取已完成模型、标签及当前epoch断点。运行期间不要重新生成数据或修改配置；需要更换数据/配置时先停止任务并检查旧断点是否适用。
 
-只运行某阶段可使用`step5/step5.py train`，或`step6/step6.py label / learn / report`。
-推理命令为`step5/step5.py infer --cif 路径`；新组成或A/B位不明确时增加`--a-elements Ba,Sr --b-elements Ti`等显式位点元素参数。
+只运行某阶段可使用`train_formation.py train`，或`label_and_active.py label / learn / report`。
+推理命令为`train_formation.py infer --cif 路径`；新组成或A/B位不明确时增加`--a-elements Ba,Sr --b-elements Ti`等显式位点元素参数。
 正式双图模型还必须提供同组成参考结构：`--reference-cif cubic.cif`。
 
 ## 方法与检查
@@ -66,7 +68,7 @@ CHGNet只做固定几何单点计算，代理标签是原始母体形成能加�
 
 为排除指标定义改变造成的虚假提升，又按旧单图流程完全相同的“同组成内所有留出结构两两能量差、再按组成平均”口径复算：双图模型验证pair MAE为0.00530、封存测试pair MAE为0.00911 eV/atom；旧单图模型约为0.075。因此提升并非只来自改名或单位变化。划分审计显示训练/验证/测试候选ID以及`(组成,模式,角度)`均无重叠，但100个组成有意共享；结论仅适用于已知组成上的未见角度插值，不能解释为新组成外推。上述均为对CHGNet代理标签的误差，不是相对真实DFT的误差。
 
-训练峰值分配显存约1.90 GiB，稳定阶段每epoch约2.5—2.8秒。五个模型以seed 42、123、2026、3407、7777统一打包在`step6/models.pt`，同一份也保留为`dual_models.pt`。
+训练峰值分配显存约1.90 GiB，稳定阶段每epoch约2.5—2.8秒。五个模型以seed 42、123、2026、3407、7777统一打包在`final_models.pt`。
 
 旧Step 6约18 MB代理实验结果及模型已按用户要求删除，未单独备份；原Step 4/5受Git跟踪的旧结构和评分文件可从版本历史恢复。原始数据和原始五模型保留。
 
