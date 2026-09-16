@@ -1,0 +1,50 @@
+{
+  "experiment": "no_anchor_head",
+  "seeds": [
+    42,
+    123,
+    2026,
+    3407,
+    7777
+  ],
+  "train_pairs": 800,
+  "validation_pairs": 200,
+  "test_pairs": 400,
+  "ensemble_test_absolute_mae_eV_atom": 0.09790102928876877,
+  "ensemble_test_delta_mae_eV_atom": 0.006969395715139399,
+  "no_anchor_reference_energy_mae_eV_atom_mean_over_seeds": 0.10075626736879348,
+  "full_reference_energy_mae_eV_atom_mean_over_seeds": 0.0025919111371040344,
+  "full_anchor_correction_eV_atom_mean": 0.028619270866038278,
+  "full_anchor_correction_eV_atom_std": 0.14058556189496615,
+  "per_seed_test_metrics": {
+    "42": {
+      "absolute_mae_eV_atom": 0.10330557733774186,
+      "delta_mae_eV_atom": 0.006746702940617979
+    },
+    "123": {
+      "absolute_mae_eV_atom": 0.09184492975473404,
+      "delta_mae_eV_atom": 0.013346183594840112
+    },
+    "2026": {
+      "absolute_mae_eV_atom": 0.1022244080901146,
+      "delta_mae_eV_atom": 0.010683353879358037
+    },
+    "3407": {
+      "absolute_mae_eV_atom": 0.1029955130815506,
+      "delta_mae_eV_atom": 0.008169472108638729
+    },
+    "7777": {
+      "absolute_mae_eV_atom": 0.10548476338386535,
+      "delta_mae_eV_atom": 0.011429290477826726
+    }
+  },
+  "per_seed_best_epoch": {
+    "42": 79,
+    "123": 45,
+    "2026": 32,
+    "3407": 72,
+    "7777": 66
+  },
+  "parameters_total_no_anchor": 1823491,
+  "trainable_parameters_no_anchor": 936834
+}
