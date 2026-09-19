@@ -1,0 +1,18 @@
+{
+  "absolute_mae": 0.004146616816520681,
+  "delta_mae": 0.0034613307411200367,
+  "mean_uncertainty": 0.007507780038628179,
+  "seeds": [
+    42,
+    123,
+    2026,
+    3407,
+    7777
+  ],
+  "test_absolute_mae": 0.005011776268482209,
+  "test_delta_mae": 0.004776014450615093,
+  "test_mean_uncertainty": 0.010052380432652868,
+  "train_pairs": 800,
+  "validation_pairs": 200,
+  "test_pairs": 400
+}

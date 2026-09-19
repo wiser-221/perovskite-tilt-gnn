@@ -1,0 +1,17 @@
+{
+  "experiment": "single_graph_absolute_proxy",
+  "seeds": [
+    42,
+    123,
+    2026,
+    3407,
+    7777
+  ],
+  "train_structures": 800,
+  "validation_structures": 200,
+  "test_structures": 400,
+  "validation_absolute_mae": 0.007013323716819286,
+  "test_absolute_mae": 0.009273728355765343,
+  "test_mean_uncertainty": 0.013203185051679611,
+  "parameters_total": 886657
+}
